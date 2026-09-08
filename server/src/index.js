@@ -3,9 +3,11 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
-import { initDatabase } from './config/db.js';
+import db, { initDatabase } from './config/db.js';
+import { seed } from './seeds/seedDatabase.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 import authRoutes from './routes/authRoutes.js';
@@ -31,9 +33,22 @@ const PORT = process.env.PORT || 5000;
 // Initialize Database Schema
 initDatabase();
 
-// CORS configuration
+// Auto-seed initial demo data if database is fresh (0 users)
+try {
+  const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get()?.count || 0;
+  if (userCount === 0) {
+    console.log('[INFO] Fresh database detected. Seeding demo organization data...');
+    seed().then(() => console.log('[OK] Database auto-seeded successfully.'));
+  }
+} catch (e) {
+  console.warn('[WARN] Auto-seed check notice:', e.message);
+}
+
+// CORS configuration (allow all in production when served together, or localhost in dev)
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:5000'],
+  origin: process.env.NODE_ENV === 'production' 
+    ? true 
+    : ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:5000'],
   credentials: true
 }));
 
@@ -57,6 +72,7 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'online',
     system: 'Pharmaceutical Management System API',
+    environment: process.env.NODE_ENV || 'development',
     timestamp: new Date().toISOString()
   });
 });
@@ -74,7 +90,21 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/notifications', notificationRoutes);
 
-// 404 Route Handler
+// Static frontend serving (Render / Production)
+const clientDistPath = path.resolve(__dirname, '../../client/dist');
+if (fs.existsSync(clientDistPath)) {
+  app.use(express.static(clientDistPath));
+
+  // SPA fallback for all client routes (e.g. /users, /pos, /reports)
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) {
+      return next();
+    }
+    res.sendFile(path.join(clientDistPath, 'index.html'));
+  });
+}
+
+// 404 Route Handler for unmatched API requests
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -90,8 +120,9 @@ app.use(errorHandler);
 if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
     console.log(`=======================================================`);
-    console.log(`  PHARMACEUTICAL MANAGEMENT SYSTEM - BACKEND API`);
+    console.log(`  PHARMACEUTICAL MANAGEMENT SYSTEM`);
     console.log(`  Server listening on http://localhost:${PORT}`);
+    console.log(`  Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`  Database: SQLite (server/data/pharma.db)`);
     console.log(`=======================================================`);
   });
