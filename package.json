@@ -1,0 +1,14 @@
+{
+  "name": "pharmaceutical-management-system",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Enterprise Pharmaceutical Management System",
+  "scripts": {
+    "start": "node server/src/index.js",
+    "server": "node --watch server/src/index.js",
+    "seed": "node server/src/seeds/seedDatabase.js",
+    "test": "node server/src/tests/api.test.js",
+    "client": "npm --prefix client run dev",
+    "dev": "node server/src/index.js"
+  }
+}
