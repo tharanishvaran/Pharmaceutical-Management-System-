@@ -126,23 +126,25 @@ export async function seed() {
 
   console.log('--- Seeding Users (Admin, Managers, Pharmacists, Cashiers, Reps, Vendors, Doctors, Customers) ---');
   
-  // Clean existing users to avoid unique email conflicts if re-seeded
-  db.prepare(`DELETE FROM users`).run();
-  db.prepare(`DELETE FROM managers`).run();
-  db.prepare(`DELETE FROM pharmacists`).run();
-  db.prepare(`DELETE FROM cashiers`).run();
-  db.prepare(`DELETE FROM vendors`).run();
-  db.prepare(`DELETE FROM doctors`).run();
-  db.prepare(`DELETE FROM customers`).run();
-  db.prepare(`DELETE FROM medical_representatives`).run();
-  db.prepare(`DELETE FROM products`).run();
-  db.prepare(`DELETE FROM product_batches`).run();
-  db.prepare(`DELETE FROM sales`).run();
-  db.prepare(`DELETE FROM sale_items`).run();
-  db.prepare(`DELETE FROM sales_targets`).run();
-  db.prepare(`DELETE FROM sales_activities`).run();
-  db.prepare(`DELETE FROM notifications`).run();
+  // Clean existing tables to avoid unique email conflicts if re-seeded
+  db.pragma('foreign_keys = OFF');
   db.prepare(`DELETE FROM audit_logs`).run();
+  db.prepare(`DELETE FROM notifications`).run();
+  db.prepare(`DELETE FROM sales_activities`).run();
+  db.prepare(`DELETE FROM sales_targets`).run();
+  db.prepare(`DELETE FROM sale_items`).run();
+  db.prepare(`DELETE FROM sales`).run();
+  db.prepare(`DELETE FROM product_batches`).run();
+  db.prepare(`DELETE FROM products`).run();
+  db.prepare(`DELETE FROM medical_representatives`).run();
+  db.prepare(`DELETE FROM customers`).run();
+  db.prepare(`DELETE FROM doctors`).run();
+  db.prepare(`DELETE FROM vendors`).run();
+  db.prepare(`DELETE FROM cashiers`).run();
+  db.prepare(`DELETE FROM pharmacists`).run();
+  db.prepare(`DELETE FROM managers`).run();
+  db.prepare(`DELETE FROM users`).run();
+  db.pragma('foreign_keys = ON');
 
   // 1. ADMIN (1)
   const adminResult = insertUser.run('Dr. Rajesh Sharma (Admin)', 'admin@example.com', passwordHash, 'ADMIN', '+91 98765 43210', 'active', '-60 days');

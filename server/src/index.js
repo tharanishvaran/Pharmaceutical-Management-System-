@@ -27,6 +27,7 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const isVercel = Boolean(process.env.VERCEL);
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -38,7 +39,8 @@ try {
   const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get()?.count || 0;
   if (userCount === 0) {
     console.log('[INFO] Fresh database detected. Seeding demo organization data...');
-    seed().then(() => console.log('[OK] Database auto-seeded successfully.'));
+    await seed();
+    console.log('[OK] Database auto-seeded successfully.');
   }
 } catch (e) {
   console.warn('[WARN] Auto-seed check notice:', e.message);
@@ -117,13 +119,13 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 // Start server
-if (process.env.NODE_ENV !== 'test') {
+if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`=======================================================`);
     console.log(`  PHARMACEUTICAL MANAGEMENT SYSTEM`);
     console.log(`  Server listening on http://localhost:${PORT}`);
     console.log(`  Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`  Database: SQLite (server/data/pharma.db)`);
+    console.log(`  Database: SQLite (${isVercel ? '/tmp/pharma.db' : 'server/data/pharma.db'})`);
     console.log(`=======================================================`);
   });
 }

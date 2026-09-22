@@ -2,6 +2,7 @@
   "name": "pharmaceutical-management-system",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "Enterprise Pharmaceutical Management System",
   "scripts": {
     "build": "npm --prefix server install --include=dev && npm --prefix client install --include=dev && npm --prefix client run build",
@@ -11,5 +12,14 @@
     "test": "node server/src/tests/api.test.js",
     "client": "npm --prefix client run dev",
     "dev": "node server/src/index.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.8.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "jsonwebtoken": "^9.0.2"
   }
 }
