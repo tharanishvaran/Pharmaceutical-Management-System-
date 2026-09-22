@@ -17,6 +17,18 @@ if (!fs.existsSync(dataDir)) {
 const dbPath = path.join(dataDir, 'pharma.db');
 const db = new Database(dbPath);
 
+// Cache prepared statements to prevent Node 24+ GC cleanup hook crash and optimize query performance
+const stmtCache = new Map();
+const originalPrepare = db.prepare.bind(db);
+db.prepare = function(sql) {
+  let stmt = stmtCache.get(sql);
+  if (!stmt) {
+    stmt = originalPrepare(sql);
+    stmtCache.set(sql, stmt);
+  }
+  return stmt;
+};
+
 // Initialize schema & pragmas
 export function initDatabase() {
   try {
@@ -39,4 +51,5 @@ export function initDatabase() {
 }
 
 export default db;
+
 

@@ -1,12 +1,22 @@
 import assert from 'assert';
 import db from '../config/db.js';
+import app from '../index.js';
 
-const PORT = process.env.PORT || 5000;
-let baseUrl = `http://localhost:${PORT}`;
+let server;
+let baseUrl = '';
 
 async function runTests() {
+  // Start server on dynamic free port
+  await new Promise((resolve) => {
+    server = app.listen(0, () => {
+      const port = server.address().port;
+      baseUrl = `http://localhost:${port}`;
+      resolve();
+    });
+  });
+
   console.log('\n======================================================');
-  console.log(' RUNNING AUTOMATED PHARMACEUTICAL SYSTEM TEST SUITE');
+  console.log(` RUNNING AUTOMATED PHARMACEUTICAL SYSTEM TEST SUITE (${baseUrl})`);
   console.log('======================================================\n');
 
   let passed = 0;
@@ -140,16 +150,25 @@ async function runTests() {
     assert.strictEqual(resAudit.status, 200);
   })();
 
+  // Dynamically get Rep 1 (Ravi) target ID
+  const rep1Target = db.prepare(`
+    SELECT t.id 
+    FROM sales_targets t 
+    JOIN medical_representatives r ON t.rep_id = r.id 
+    WHERE r.name LIKE '%Ravi%' 
+    LIMIT 1
+  `).get();
+  const rep1TargetId = rep1Target ? rep1Target.id : 1;
+
   await test('Medical Rep 2 trying to access Rep 1 target is DENIED with 403 Forbidden', async () => {
-    // Target 1 belongs to Rep 1 (Ravi)
-    const res = await fetch(`${baseUrl}/api/targets/1`, {
+    const res = await fetch(`${baseUrl}/api/targets/${rep1TargetId}`, {
       headers: { Authorization: `Bearer ${rep2Token}` }
     });
     assert.strictEqual(res.status, 403);
   })();
 
   await test('Medical Rep 1 accessing own target is ALLOWED with 200 OK', async () => {
-    const res = await fetch(`${baseUrl}/api/targets/1`, {
+    const res = await fetch(`${baseUrl}/api/targets/${rep1TargetId}`, {
       headers: { Authorization: `Bearer ${rep1Token}` }
     });
     assert.strictEqual(res.status, 200);
@@ -159,7 +178,7 @@ async function runTests() {
 
   // 3. TARGET ACHIEVEMENT FORMULA VERIFICATION
   await test('Target formula calculates exact percentage: (Actual / Target) * 100', async () => {
-    const res = await fetch(`${baseUrl}/api/targets/1`, {
+    const res = await fetch(`${baseUrl}/api/targets/${rep1TargetId}`, {
       headers: { Authorization: `Bearer ${adminToken}` }
     });
     const data = await res.json();
@@ -237,10 +256,17 @@ async function runTests() {
   console.log(` TEST SUMMARY: ${passed} PASSED, ${failed} FAILED`);
   console.log('======================================================\n');
 
-  process.exit(failed > 0 ? 1 : 0);
+  if (server) {
+    server.close();
+  }
+
+  if (failed > 0) {
+    process.exitCode = 1;
+  }
 }
 
 runTests().catch(err => {
   console.error('Test execution failed:', err);
-  process.exit(1);
+  if (server) server.close();
+  process.exitCode = 1;
 });
